@@ -30,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initFragmentData() {
+        fragments.add(new FragmentInstance("SlideTape", MainFragment.newInstance(R.layout.fragment_slide_tape)));
         fragments.add(new FragmentInstance("ClockView", MainFragment.newInstance(R.layout.fragment_clock_view)));
     }
 
