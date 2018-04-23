@@ -20,6 +20,11 @@ import android.widget.Scroller;
 
 public class SlideTapeView extends View{
 
+    //惯性滑动相关
+    private int FLING_MIN_SPEED = 500;
+    private Scroller mScroller;
+    private VelocityTracker mVelocityTracker;
+
     private Paint mScalePaint;
     private Paint mTextPaint;
     private Paint mBaseScalePaint;
@@ -27,8 +32,7 @@ public class SlideTapeView extends View{
     private float mWidth;
     private float mHeight;
     private float mScaleSpace;
-    private float mTranslocation;
-    private float mTouchX;
+    private float mLastTouchX;
 
     public SlideTapeView(Context context) {
         super(context);
@@ -46,6 +50,7 @@ public class SlideTapeView extends View{
     }
 
     private void init() {
+        mScroller = new Scroller(getContext());
         mScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mBaseScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -73,27 +78,45 @@ public class SlideTapeView extends View{
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         performClick();
+        if(mVelocityTracker == null) {
+            mVelocityTracker = VelocityTracker.obtain();
+        }
+        mVelocityTracker.addMovement(event);
+
         ViewGroup parent = getScrollableParent();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 if(parent != null) {
                     parent.requestDisallowInterceptTouchEvent(true);
                 }
-                mTouchX = event.getX();
+                mLastTouchX = event.getX();
                 break;
             case MotionEvent.ACTION_MOVE:
-                mTranslocation += (int)(event.getX() - mTouchX);
-                scrollBy((int) (mTouchX - event.getX()), 0);
-                mTouchX = event.getX();
+                scrollBy((int) (mLastTouchX - event.getX()), 0);
+                mLastTouchX = event.getX();
                 break;
             case MotionEvent.ACTION_UP:
                 if(parent != null) {
                     parent.requestDisallowInterceptTouchEvent(false);
                 }
-                mTranslocation += event.getX() - mTouchX;
+                //抬手时速度大于阈值，执行fling动作
+                mVelocityTracker.computeCurrentVelocity(1000);
+                int velocityX = (int) mVelocityTracker.getXVelocity();
+                if(Math.abs(velocityX) > FLING_MIN_SPEED) {
+                    fling(-velocityX);
+                }
+                if(mVelocityTracker != null) {
+                    mVelocityTracker.recycle();
+                    mVelocityTracker = null;
+                }
                 break;
         }
         return true;
+    }
+
+    private void fling(int x) {
+        mScroller.fling(getScrollX(), 0, x, 0, -10000, 10000, 0, 0);
+        invalidate();
     }
 
     @Override
@@ -103,9 +126,13 @@ public class SlideTapeView extends View{
         canvas.save();
         canvas.translate(0, mHeight / 2);
 
-        canvas.drawLine(-mTranslocation, 0, mWidth - mTranslocation, 0, mScalePaint);
+        //横向的位移，向左为正，向右为负
+        float translocation = getScrollX();
 
-        for(float i = upNumber(mTranslocation, mScaleSpace); i < mWidth + upNumber(mTranslocation, mScaleSpace); i += 30) {
+        //横向的刻度线
+        canvas.drawLine(translocation, 0, mWidth + translocation, 0, mScalePaint);
+        //纵向刻度线
+        for(float i = upNumber(translocation, mScaleSpace); i < mWidth + upNumber(translocation, mScaleSpace); i += 30) {
             float scaleNum = i / 30;
             float x = scaleNum * mScaleSpace;      //当前刻度线的横坐标
             if(scaleNum % 10 == 0) {
@@ -118,7 +145,8 @@ public class SlideTapeView extends View{
             }
         }
 
-        canvas.drawLine(mWidth / 2 - mTranslocation, 0, mWidth / 2 - mTranslocation, 170, mBaseScalePaint);
+        //基线
+        canvas.drawLine(mWidth / 2 + translocation, 0, mWidth / 2 + translocation, 170, mBaseScalePaint);
 
         canvas.restore();
     }
@@ -151,7 +179,6 @@ public class SlideTapeView extends View{
      * 向上取整
      */
     private float upNumber(float x, float y) {
-        x = -x;
         if(x % y == 0) {
             return (x / y) * 30;
         } else {
@@ -161,6 +188,9 @@ public class SlideTapeView extends View{
 
     @Override
     public void computeScroll() {
-        super.computeScroll();
+        if(mScroller.computeScrollOffset()) {
+            scrollTo(mScroller.getCurrX(), mScroller.getCurrY());
+            invalidate();
+        }
     }
 }
