@@ -21,7 +21,7 @@ import android.widget.Scroller;
 public class SlideTapeView extends View{
 
     //惯性滑动相关
-    private int FLING_MIN_SPEED = 500;
+    private static final int FLING_MIN_SPEED = 500;
     private Scroller mScroller;
     private VelocityTracker mVelocityTracker;
 
@@ -104,6 +104,8 @@ public class SlideTapeView extends View{
                 int velocityX = (int) mVelocityTracker.getXVelocity();
                 if(Math.abs(velocityX) > FLING_MIN_SPEED) {
                     fling(-velocityX);
+                } else {
+                    scrollToScaleLine();
                 }
                 if(mVelocityTracker != null) {
                     mVelocityTracker.recycle();
@@ -114,8 +116,37 @@ public class SlideTapeView extends View{
         return true;
     }
 
+    /**
+     *  滑动到最近的刻度线上
+     */
+    private void scrollToScaleLine() {
+        float translocation = getScrollX();
+        if(translocation % mScaleSpace == 0) {
+            return;
+        }
+
+        int left, right;    //左右两边最近的刻度线
+        if(translocation > 0) {
+            left = (int) (translocation / mScaleSpace);
+            right = left + 1;
+        } else {
+            right = (int) (translocation / mScaleSpace);
+            left = right - 1;
+        }
+
+        float mid = (mScaleSpace * left + mScaleSpace * right) / 2;
+        int transX;
+        if(translocation < mid) {
+            transX = (int) (mScaleSpace * left - translocation);
+        } else {
+            transX = (int) (mScaleSpace * right - translocation);
+        }
+        mScroller.startScroll(getScrollX(), 0, transX, 0, 500);
+        invalidate();
+    }
+
     private void fling(int x) {
-        mScroller.fling(getScrollX(), 0, x, 0, -10000, 10000, 0, 0);
+        mScroller.fling(getScrollX(), 0, x, 0, Integer.MIN_VALUE, Integer.MAX_VALUE, 0, 0);
         invalidate();
     }
 
@@ -177,12 +208,19 @@ public class SlideTapeView extends View{
 
     /**
      * 向上取整
+     * 根据x的范围返回值：
+     * (-72,-36] -> -30
+     * (-36,0]   -> 0
+     * (0,36]    -> 30
+     * (36,72]   -> 60
      */
     private float upNumber(float x, float y) {
         if(x % y == 0) {
             return (x / y) * 30;
+        } else if(x > 0){
+            return (int) (x / y + 1) * 30;
         } else {
-            return (int)(x / y + 1) * 30;
+            return (int) (x / y) * 30;
         }
     }
 
@@ -190,6 +228,9 @@ public class SlideTapeView extends View{
     public void computeScroll() {
         if(mScroller.computeScrollOffset()) {
             scrollTo(mScroller.getCurrX(), mScroller.getCurrY());
+            if(!mScroller.computeScrollOffset()) {
+                scrollToScaleLine();
+            }
             invalidate();
         }
     }
