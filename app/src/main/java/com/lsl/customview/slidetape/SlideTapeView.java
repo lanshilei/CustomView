@@ -3,6 +3,7 @@ package com.lsl.customview.slidetape;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
@@ -13,6 +14,8 @@ import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.Scroller;
+
+import java.math.BigDecimal;
 
 /**
  * Created by lsl on 2018/04/17
@@ -31,8 +34,12 @@ public class SlideTapeView extends View{
 
     private float mWidth;
     private float mHeight;
-    private float mScaleSpace;
-    private float mLastTouchX;
+    private int mScaleNum = 30;     //刻度线个数
+    private float mScaleSpace;      //刻度线间距
+    private float mScaleGranularity = 0.1f; //刻度粒度
+    private int mInitScale = 0;     //初始刻度值
+
+    private float mLastTouchX;  //上一次的触摸点
 
     public SlideTapeView(Context context) {
         super(context);
@@ -60,6 +67,7 @@ public class SlideTapeView extends View{
         mTextPaint.setTextAlign(Paint.Align.CENTER);
         mBaseScalePaint.setARGB(0xff, 0x4f, 0xba, 0x77);
         mBaseScalePaint.setStrokeWidth(10);
+        mBaseScalePaint.setTextAlign(Paint.Align.CENTER);
     }
 
     @Override
@@ -67,7 +75,7 @@ public class SlideTapeView extends View{
         super.onSizeChanged(w, h, oldw, oldh);
         mWidth = w;
         mHeight = h;
-        mScaleSpace = mWidth / 30;
+        mScaleSpace = mWidth / mScaleNum;
     }
 
     @Override
@@ -163,23 +171,43 @@ public class SlideTapeView extends View{
         //横向的刻度线
         canvas.drawLine(translocation, 0, mWidth + translocation, 0, mScalePaint);
         //纵向刻度线
-        for(float i = upNumber(translocation, mScaleSpace); i < mWidth + upNumber(translocation, mScaleSpace); i += 30) {
-            float scaleNum = i / 30;
+        for(float i = upNumber(translocation, mScaleSpace); i < mWidth + upNumber(translocation, mScaleSpace); i += mScaleNum) {
+            float scaleNum = i / mScaleNum;
+            float startX = mInitScale - mScaleGranularity * mScaleNum / 2;     //第一条刻度线的值
             float x = scaleNum * mScaleSpace;      //当前刻度线的横坐标
-            if(scaleNum % 10 == 0) {
+            float scaleIndex = startX + scaleNum * mScaleGranularity;   //当前刻度线的值
+            if(scaleIndex % 1 == 0) {
                 mScalePaint.setStrokeWidth(6);
                 canvas.drawLine(x, 0, x, 150, mScalePaint);
-                canvas.drawText(scaleNum / 10 + "", x, 200, mTextPaint);
+                canvas.drawText((int)scaleIndex + "", x, 220, mTextPaint);
             } else {
                 mScalePaint.setStrokeWidth(4);
                 canvas.drawLine(x, 0, x, 75, mScalePaint);
             }
         }
 
-        //基线
-        canvas.drawLine(mWidth / 2 + translocation, 0, mWidth / 2 + translocation, 170, mBaseScalePaint);
+        drawBaseScale(canvas);
 
         canvas.restore();
+    }
+
+    /**
+     * 绘制基准线以及刻度对应的文字
+     */
+    private void drawBaseScale(Canvas canvas) {
+        float translocation = getScrollX();
+        //基准线
+        canvas.drawLine(mWidth / 2 + translocation, 0, mWidth / 2 + translocation, 170, mBaseScalePaint);
+        //选中文字
+        Rect rect = new Rect();
+        float reciprocal = 1 / mScaleGranularity;
+        String scaleText = mInitScale + ((int) (translocation / mScaleSpace)) / reciprocal + "";
+        mBaseScalePaint.setTextSize(100);
+        mBaseScalePaint.getTextBounds(scaleText, 0, scaleText.length(), rect);
+        canvas.drawText(scaleText + "", mWidth / 2 + translocation, -80, mBaseScalePaint);
+        //单位
+        mBaseScalePaint.setTextSize(50);
+        canvas.drawText("kg", mWidth / 2 + rect.right + translocation, rect.top - 80, mBaseScalePaint);
     }
 
     /**
@@ -209,18 +237,18 @@ public class SlideTapeView extends View{
     /**
      * 向上取整
      * 根据x的范围返回值：
-     * (-72,-36] -> -30
+     * (-72,-36] -> -mScaleNum
      * (-36,0]   -> 0
-     * (0,36]    -> 30
-     * (36,72]   -> 60
+     * (0,36]    -> mScaleNum
+     * (36,72]   -> 2*mScaleNum
      */
     private float upNumber(float x, float y) {
         if(x % y == 0) {
-            return (x / y) * 30;
+            return (x / y) * mScaleNum;
         } else if(x > 0){
-            return (int) (x / y + 1) * 30;
+            return (int) (x / y + 1) * mScaleNum;
         } else {
-            return (int) (x / y) * 30;
+            return (int) (x / y) * mScaleNum;
         }
     }
 
