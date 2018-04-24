@@ -38,6 +38,8 @@ public class SlideTapeView extends View{
     private float mScaleSpace;      //刻度线间距
     private float mScaleGranularity = 0.1f; //刻度粒度
     private int mInitScale = 0;     //初始刻度值
+    private int mMinScale = 0;      //最小刻度值
+    private int mMaxScale = 100;    //最大刻度值
 
     private float mLastTouchX;  //上一次的触摸点
 
@@ -100,8 +102,14 @@ public class SlideTapeView extends View{
                 mLastTouchX = event.getX();
                 break;
             case MotionEvent.ACTION_MOVE:
-                scrollBy((int) (mLastTouchX - event.getX()), 0);
-                mLastTouchX = event.getX();
+                float minX = - (mInitScale - mMinScale) * mScaleSpace / mScaleGranularity;   //左边界坐标
+                float maxX = (mMaxScale - mInitScale) * mScaleSpace / mScaleGranularity;   //右边界坐标
+                //右划未超过左边界，左划未超过右边界
+                if((event.getX() > mLastTouchX && getScrollX() > minX) ||
+                        (event.getX() < mLastTouchX && getScrollX() < maxX)) {
+                    scrollBy((int) (mLastTouchX - event.getX()), 0);
+                    mLastTouchX = event.getX();
+                }
                 break;
             case MotionEvent.ACTION_UP:
                 if(parent != null) {
@@ -154,7 +162,9 @@ public class SlideTapeView extends View{
     }
 
     private void fling(int x) {
-        mScroller.fling(getScrollX(), 0, x, 0, Integer.MIN_VALUE, Integer.MAX_VALUE, 0, 0);
+        float minX = - (mInitScale - mMinScale) * mScaleSpace / mScaleGranularity;   //左边界坐标
+        float maxX = (mMaxScale - mInitScale) * mScaleSpace / mScaleGranularity;   //右边界坐标
+        mScroller.fling(getScrollX(), 0, x, 0, (int) minX, (int) maxX, 0, 0);
         invalidate();
     }
 
@@ -165,34 +175,48 @@ public class SlideTapeView extends View{
         canvas.save();
         canvas.translate(0, mHeight / 2);
 
-        //横向的位移，向左为正，向右为负
-        float translocation = getScrollX();
-
-        //横向的刻度线
-        canvas.drawLine(translocation, 0, mWidth + translocation, 0, mScalePaint);
-        //纵向刻度线
-        for(float i = upNumber(translocation, mScaleSpace); i < mWidth + upNumber(translocation, mScaleSpace); i += mScaleNum) {
-            float scaleNum = i / mScaleNum;
-            float startX = mInitScale - mScaleGranularity * mScaleNum / 2;     //第一条刻度线的值
-            float x = scaleNum * mScaleSpace;      //当前刻度线的横坐标
-            float scaleIndex = startX + scaleNum * mScaleGranularity;   //当前刻度线的值
-            if(scaleIndex % 1 == 0) {
-                mScalePaint.setStrokeWidth(6);
-                canvas.drawLine(x, 0, x, 150, mScalePaint);
-                canvas.drawText((int)scaleIndex + "", x, 220, mTextPaint);
-            } else {
-                mScalePaint.setStrokeWidth(4);
-                canvas.drawLine(x, 0, x, 75, mScalePaint);
-            }
-        }
-
+        drawHorizontalLine(canvas);
+        drawScaleLine(canvas);
         drawBaseScale(canvas);
 
         canvas.restore();
     }
 
     /**
-     * 绘制基准线以及刻度对应的文字
+     * 绘制水平的刻度线
+     */
+    private void drawHorizontalLine(Canvas canvas) {
+        float translocation = getScrollX();
+        float minX = mWidth / 2 - (mInitScale - mMinScale) * mScaleSpace / mScaleGranularity;   //左边界坐标
+        float maxX = mWidth / 2 + (mMaxScale - mInitScale) * mScaleSpace / mScaleGranularity;   //右边界坐标
+        canvas.drawLine(Math.max(translocation, minX), 0, Math.min(mWidth + translocation, maxX), 0, mScalePaint);
+    }
+
+    /**
+     * 绘制刻度线以及刻度值
+     */
+    private void drawScaleLine(Canvas canvas) {
+        float translocation = getScrollX();
+        float startX = mInitScale - mScaleGranularity * mScaleNum / 2;     //第一条刻度线的值
+        for(float i = upNumber(translocation, mScaleSpace); i < mWidth + upNumber(translocation, mScaleSpace); i += mScaleNum) {
+            float scaleIndex = i / mScaleNum;
+            float scaleX = scaleIndex * mScaleSpace;      //当前刻度线的横坐标
+            float scaleValue = startX + scaleIndex * mScaleGranularity;   //当前刻度线的值
+            if(scaleValue >= mMinScale && scaleValue <= mMaxScale) {
+                if (scaleValue % 1 == 0) {
+                    mScalePaint.setStrokeWidth(6);
+                    canvas.drawLine(scaleX, 0, scaleX, 150, mScalePaint);
+                    canvas.drawText((int) scaleValue + "", scaleX, 220, mTextPaint);
+                } else {
+                    mScalePaint.setStrokeWidth(4);
+                    canvas.drawLine(scaleX, 0, scaleX, 75, mScalePaint);
+                }
+            }
+        }
+    }
+
+    /**
+     * 绘制基准线以及选中的的刻度值
      */
     private void drawBaseScale(Canvas canvas) {
         float translocation = getScrollX();
