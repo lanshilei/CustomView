@@ -99,6 +99,9 @@ public class SlideTapeView extends View{
                 if(parent != null) {
                     parent.requestDisallowInterceptTouchEvent(true);
                 }
+                if(!mScroller.isFinished()) {
+                    mScroller.abortAnimation();
+                }
                 mLastTouchX = event.getX();
                 break;
             case MotionEvent.ACTION_MOVE:
