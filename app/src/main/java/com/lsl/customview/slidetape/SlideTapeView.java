@@ -1,6 +1,7 @@
 package com.lsl.customview.slidetape;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
@@ -14,6 +15,8 @@ import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.Scroller;
+
+import com.lsl.customview.R;
 
 /**
  * Created by lsl on 2018/04/17
@@ -30,36 +33,42 @@ public class SlideTapeView extends View{
     private Paint mTextPaint;
     private Paint mBaseScalePaint;
 
+    private float mBaseScaleLength;
+    private float mLongScaleLength;
+    private float mShortScaleLength;
+    private float mBaseScaleTextSize;
+    private float mUnitTextSize;
+    private float mScaleTextSize;
+    private float mPaddingTop;
+    private float mPaddingBottom;
+
     private float mWidth;
     private float mHeight;
     /**
      * mScaleNum * mScaleSpace = mWidth
      * 这两个属性赋值一个即可
      */
-    private int mScaleNum = 30;     //刻度线个数
+    private int mScaleNum;          //刻度线个数
     private float mScaleSpace;      //刻度线间距
-    private int mInitScale = 0;     //初始刻度
-    private int mMinScale = -100;   //最小刻度
-    private int mMaxScale = 100;    //最大刻度
-    private float mScaleGranularity = 1f;    //大刻度粒度
-    private float mFinerGranularity = 0.1f;   //小刻度粒度
-    private int mScaleCount = (int) (mScaleGranularity / mFinerGranularity);    //两条大刻度线之间的刻度数
-    private String mUnit = "kg";       //单位
+    private int mInitScale;         //初始刻度
+    private int mMinScale;          //最小刻度
+    private int mMaxScale;          //最大刻度
+    private float mScaleGranularity;//大刻度粒度
+    private float mFinerGranularity;//小刻度粒度
+    private int mScaleCount;        //两条大刻度线之间的刻度数
+    private String mUnit = "kg";      //单位
 
     private float mLastTouchX;  //上一次的触摸点
 
     public SlideTapeView(Context context) {
         super(context);
+        initAttributes();
         init();
     }
 
     public SlideTapeView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        init();
-    }
-
-    public SlideTapeView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
+        initAttributes(attrs);
         init();
     }
 
@@ -70,11 +79,76 @@ public class SlideTapeView extends View{
         mBaseScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mScalePaint.setARGB(0xff, 0xe4, 0xe4, 0xe4);
         mScalePaint.setStrokeWidth(2);
-        mTextPaint.setTextSize(40);
+        mTextPaint.setTextSize(mScaleTextSize);
         mTextPaint.setTextAlign(Paint.Align.CENTER);
         mBaseScalePaint.setARGB(0xff, 0x4f, 0xba, 0x77);
         mBaseScalePaint.setStrokeWidth(10);
         mBaseScalePaint.setTextAlign(Paint.Align.CENTER);
+    }
+
+    private void initAttributes() {
+        mScaleNum = 30;
+        mScaleSpace = 0;
+        mInitScale = 0;
+        mMinScale = -100;
+        mMaxScale = 100;
+        mScaleGranularity = 1;
+        mFinerGranularity = 0.1f;
+        mBaseScaleLength = dp2px(56);
+        mLongScaleLength = dp2px(50);
+        mShortScaleLength = dp2px(25);
+        mBaseScaleTextSize = dp2px(32);
+        mUnitTextSize = dp2px(16);
+        mScaleTextSize = dp2px(12);
+        mPaddingTop = dp2px(24);
+        mPaddingBottom = dp2px(20);
+        adjustAttrs();
+    }
+
+    private void initAttributes(AttributeSet attrs) {
+        TypedArray array = getContext().obtainStyledAttributes(attrs, R.styleable.SlideTapeView);
+        mScaleNum = array.getInteger(R.styleable.SlideTapeView_scale_num, 30);
+        mScaleSpace = array.getDimension(R.styleable.SlideTapeView_scale_space, 0);
+        mInitScale = array.getInteger(R.styleable.SlideTapeView_init_scale, 0);
+        mMinScale = array.getInteger(R.styleable.SlideTapeView_min_scale, -100);
+        mMaxScale = array.getInteger(R.styleable.SlideTapeView_max_scale, 100);
+        mScaleGranularity = array.getFloat(R.styleable.SlideTapeView_long_granularity, 1);
+        mFinerGranularity = array.getFloat(R.styleable.SlideTapeView_short_granularity, 0.1f);
+        if(array.getString(R.styleable.SlideTapeView_unit) != null) {
+            mUnit = array.getString(R.styleable.SlideTapeView_unit);
+        }
+        mBaseScaleLength = array.getDimension(R.styleable.SlideTapeView_base_scale_length, dp2px(56));
+        mLongScaleLength = array.getDimension(R.styleable.SlideTapeView_long_scale_length, dp2px(50));
+        mShortScaleLength = array.getDimension(R.styleable.SlideTapeView_short_scale_length, dp2px(25));
+        mBaseScaleTextSize = array.getDimension(R.styleable.SlideTapeView_base_text_size, dp2px(32));
+        mUnitTextSize = array.getDimension(R.styleable.SlideTapeView_unit_text_size, dp2px(16));
+        mScaleTextSize = array.getDimension(R.styleable.SlideTapeView_scale_text_size, dp2px(12));
+        mPaddingTop = array.getDimension(R.styleable.SlideTapeView_padding_top, dp2px(24));
+        mPaddingBottom = array.getDimension(R.styleable.SlideTapeView_padding_bottom, dp2px(20));
+        array.recycle();
+        adjustAttrs();
+    }
+
+    public int dp2px(float dpValue) {
+        final float scale = getContext().getResources().getDisplayMetrics().density;
+        return (int) (dpValue * scale + 0.5f);
+    }
+
+    /**
+     * 调整属性值到合法值
+     */
+    private void adjustAttrs() {
+        if(mMinScale > mMaxScale) {
+            mMinScale = -100;
+            mMaxScale = 100;
+        }
+        if(mInitScale < mMinScale) {
+            mInitScale = mMinScale;
+        }
+        if(mInitScale > mMaxScale) {
+            mInitScale = mMaxScale;
+        }
+        mScaleCount = (int) (mScaleGranularity / mFinerGranularity);
     }
 
     @Override
@@ -82,7 +156,11 @@ public class SlideTapeView extends View{
         super.onSizeChanged(w, h, oldw, oldh);
         mWidth = w;
         mHeight = h;
-        mScaleSpace = mWidth / mScaleNum;
+        if(mScaleSpace == 0) {
+            mScaleSpace = mWidth / mScaleNum;
+        } else {
+            mScaleNum = (int) (mWidth / mScaleSpace);
+        }
     }
 
     @Override
@@ -219,12 +297,12 @@ public class SlideTapeView extends View{
                     //长刻度线
                     float reciprocal = 1 / mFinerGranularity;
                     mScalePaint.setStrokeWidth(6);
-                    canvas.drawLine(scaleX, 0, scaleX, 150, mScalePaint);
-                    canvas.drawText(scaleIndex / reciprocal + "", scaleX, 220, mTextPaint);
+                    canvas.drawLine(scaleX, 0, scaleX, mLongScaleLength, mScalePaint);
+                    canvas.drawText(scaleIndex / reciprocal + "", scaleX, mLongScaleLength + mPaddingBottom, mTextPaint);
                 } else {
                     //短刻度线
                     mScalePaint.setStrokeWidth(4);
-                    canvas.drawLine(scaleX, 0, scaleX, 75, mScalePaint);
+                    canvas.drawLine(scaleX, 0, scaleX, mShortScaleLength, mScalePaint);
                 }
             }
         }
@@ -236,17 +314,19 @@ public class SlideTapeView extends View{
     private void drawBaseScale(Canvas canvas) {
         float translocation = getScrollX();
         //基准线
-        canvas.drawLine(mWidth / 2 + translocation, 0, mWidth / 2 + translocation, 170, mBaseScalePaint);
+        canvas.drawLine(mWidth / 2 + translocation, 0, mWidth / 2 + translocation, mBaseScaleLength, mBaseScalePaint);
         //选中文字
         Rect rect = new Rect();
         float reciprocal = 1 / mFinerGranularity;
         String scaleText = (mInitScale + (int) (translocation / mScaleSpace)) / reciprocal + "";
-        mBaseScalePaint.setTextSize(100);
+        mBaseScalePaint.setTextSize(mBaseScaleTextSize);
+        mBaseScalePaint.setTextAlign(Paint.Align.CENTER);
         mBaseScalePaint.getTextBounds(scaleText, 0, scaleText.length(), rect);
-        canvas.drawText(scaleText + "", mWidth / 2 + translocation, -80, mBaseScalePaint);
+        canvas.drawText(scaleText, mWidth / 2 + translocation, -mPaddingTop, mBaseScalePaint);
         //单位
-        mBaseScalePaint.setTextSize(50);
-        canvas.drawText(mUnit, mWidth / 2 + rect.right + translocation, rect.top - 80, mBaseScalePaint);
+        mBaseScalePaint.setTextSize(mUnitTextSize);
+        mBaseScalePaint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText(mUnit, (mWidth + rect.right + rect.left) / 2 + translocation, rect.top - mPaddingTop, mBaseScalePaint);
     }
 
     /**

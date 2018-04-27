@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SlideTapeView">
+        <attr name="base_scale_length" format="dimension"/>
+        <attr name="long_scale_length" format="dimension"/>
+        <attr name="short_scale_length" format="dimension"/>
+        <attr name="base_text_size" format="dimension"/>
+        <attr name="scale_text_size" format="dimension"/>
+        <attr name="unit_text_size" format="dimension"/>
+        <attr name="padding_top" format="dimension"/>
+        <attr name="padding_bottom" format="dimension"/>
+        <attr name="unit" format="string"/>
+        <attr name="scale_num" format="integer"/>
+        <attr name="scale_space" format="dimension"/>
+        <attr name="init_scale" format="integer"/>
+        <attr name="max_scale" format="integer"/>
+        <attr name="min_scale" format="integer"/>
+        <attr name="long_granularity" format="float"/>
+        <attr name="short_granularity" format="float"/>
+    </declare-styleable>
+</resources>
