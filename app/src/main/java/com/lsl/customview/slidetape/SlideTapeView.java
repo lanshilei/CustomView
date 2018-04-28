@@ -3,6 +3,7 @@ package com.lsl.customview.slidetape;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
@@ -41,6 +42,8 @@ public class SlideTapeView extends View{
     private float mScaleTextSize;
     private float mPaddingTop;
     private float mPaddingBottom;
+    private int mScaleColor;
+    private int mBaseScaleColor;
 
     private float mWidth;
     private float mHeight;
@@ -56,7 +59,7 @@ public class SlideTapeView extends View{
     private float mScaleGranularity;//大刻度粒度
     private float mFinerGranularity;//小刻度粒度
     private int mScaleCount;        //两条大刻度线之间的刻度数
-    private String mUnit = "kg";      //单位
+    private String mUnit = "";      //单位
 
     private float mLastTouchX;  //上一次的触摸点
 
@@ -77,11 +80,11 @@ public class SlideTapeView extends View{
         mScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mBaseScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mScalePaint.setARGB(0xff, 0xe4, 0xe4, 0xe4);
+        mScalePaint.setColor(mScaleColor);
         mScalePaint.setStrokeWidth(2);
         mTextPaint.setTextSize(mScaleTextSize);
         mTextPaint.setTextAlign(Paint.Align.CENTER);
-        mBaseScalePaint.setARGB(0xff, 0x4f, 0xba, 0x77);
+        mBaseScalePaint.setColor(mBaseScaleColor);
         mBaseScalePaint.setStrokeWidth(10);
         mBaseScalePaint.setTextAlign(Paint.Align.CENTER);
     }
@@ -102,6 +105,8 @@ public class SlideTapeView extends View{
         mScaleTextSize = dp2px(12);
         mPaddingTop = dp2px(24);
         mPaddingBottom = dp2px(20);
+        mScaleColor = Color.argb(0xff, 0xe4, 0xe4, 0xe4);
+        mBaseScaleColor = Color.argb(0xff, 0x4f, 0xba, 0x77);
         adjustAttrs();
     }
 
@@ -125,6 +130,8 @@ public class SlideTapeView extends View{
         mScaleTextSize = array.getDimension(R.styleable.SlideTapeView_scale_text_size, dp2px(12));
         mPaddingTop = array.getDimension(R.styleable.SlideTapeView_padding_top, dp2px(24));
         mPaddingBottom = array.getDimension(R.styleable.SlideTapeView_padding_bottom, dp2px(20));
+        mScaleColor = array.getColor(R.styleable.SlideTapeView_scale_color, Color.argb(0xff, 0xe4, 0xe4, 0xe4));
+        mBaseScaleColor = array.getColor(R.styleable.SlideTapeView_base_scale_color, Color.argb(0xff, 0x4f, 0xba, 0x77));
         array.recycle();
         adjustAttrs();
     }

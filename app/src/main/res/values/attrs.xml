@@ -17,5 +17,7 @@
         <attr name="min_scale" format="integer"/>
         <attr name="long_granularity" format="float"/>
         <attr name="short_granularity" format="float"/>
+        <attr name="scale_color" format="color"/>
+        <attr name="base_scale_color" format="color"/>
     </declare-styleable>
 </resources>
